@@ -3,8 +3,6 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
-import requests
-import json
 
 st.set_page_config(
     page_title="ApexxAdams Command Center",
@@ -76,9 +74,15 @@ def load_cora_data():
         if client:
             sheet = client.open_by_key(sheet_id).sheet1
             data = sheet.get_all_records()
-            return pd.DataFrame(data)
+            df = pd.DataFrame(data)
+            
+            # Rename columns to lowercase for consistency
+            df.columns = df.columns.str.lower().str.replace(' ', '_')
+            
+            return df
         return pd.DataFrame()
     except Exception as e:
+        st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=300)
@@ -131,18 +135,18 @@ if selected_agent == "Dashboard Overview":
     
     with col1:
         total_leads = len(cora_df) if not cora_df.empty else 0
-        st.metric("Total Leads (CORA)", total_leads, "+12 this week")
+        st.metric("Total Leads (CORA)", total_leads)
     
     with col2:
-        st.metric("Active Campaigns (MARK)", "Coming Soon", "")
+        st.metric("Active Campaigns (MARK)", "Coming Soon")
     
     with col3:
         pending_tasks = len(opsi_df[opsi_df['status'] == 'Not Started']) if not opsi_df.empty else 0
-        st.metric("Pending Tasks (OPSI)", pending_tasks, "")
+        st.metric("Pending Tasks (OPSI)", pending_tasks)
     
     with col4:
         response_rate = "68%" if not cora_df.empty else "N/A"
-        st.metric("Overall Performance", response_rate, "+5%")
+        st.metric("Overall Performance", response_rate)
     
     st.markdown("---")
     
@@ -154,10 +158,9 @@ if selected_agent == "Dashboard Overview":
             <h3>CORA</h3>
             <p>Community Outreach & Research Assistant</p>
             <p><strong>Status:</strong> <span class="status-active">Active</span></p>
-            <p><strong>Last Run:</strong> 2 hours ago</p>
-            <p><strong>Today's Leads:</strong> 15</p>
+            <p><strong>Leads Generated:</strong> {}</p>
         </div>
-        """, unsafe_allow_html=True)
+        """.format(len(cora_df) if not cora_df.empty else 0), unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
@@ -166,7 +169,6 @@ if selected_agent == "Dashboard Overview":
             <p>Marketing & Engagement Bot</p>
             <p><strong>Status:</strong> <span class="status-idle">Idle</span></p>
             <p><strong>Setup:</strong> In Progress</p>
-            <p><strong>AI Model:</strong> GPT-4o</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -176,7 +178,6 @@ if selected_agent == "Dashboard Overview":
             <h3>OPSI</h3>
             <p>Operations & Policy System</p>
             <p><strong>Status:</strong> <span class="status-offline">Coming Soon</span></p>
-            <p><strong>Setup:</strong> Pending</p>
             <p><strong>Tasks:</strong> 0</p>
         </div>
         """, unsafe_allow_html=True)
@@ -214,7 +215,7 @@ elif selected_agent == "CORA (Lead Generation)":
         
         with col2:
             today = datetime.now().strftime('%Y-%m-%d')
-            today_leads = df[df['generated_date'] == today] if 'generated_date' in df.columns else pd.DataFrame()
+            today_leads = df[df['timestamp'].str.contains(today, na=False)] if 'timestamp' in df.columns else pd.DataFrame()
             st.metric("Today", len(today_leads))
         
         with col3:
@@ -227,7 +228,7 @@ elif selected_agent == "CORA (Lead Generation)":
         
         st.markdown("---")
         
-        search = st.text_input("Search leads", "")
+        search = st.text_input("Search leads by name, email, or organization", "")
         
         filtered_df = df.copy()
         if search:
@@ -240,7 +241,7 @@ elif selected_agent == "CORA (Lead Generation)":
         
         st.subheader(f"All Leads ({len(filtered_df)})")
         
-        display_columns = ['name', 'title', 'organization', 'email', 'suggested_action', 'generated_date']
+        display_columns = ['name', 'title', 'organization', 'email', 'suggested_action', 'timestamp']
         available_columns = [col for col in display_columns if col in filtered_df.columns]
         
         st.dataframe(filtered_df[available_columns], use_container_width=True, hide_index=True)
@@ -255,7 +256,7 @@ elif selected_agent == "CORA (Lead Generation)":
 elif selected_agent == "MARK (Marketing AI)":
     
     st.header("MARK - Marketing & Engagement AI")
-    st.write("*Your AI Marketing Assistant - Powered by GPT-4o*")
+    st.write("Your AI Marketing Assistant - Powered by GPT-4o")
     
     col1, col2 = st.columns([2, 1])
     
@@ -266,7 +267,7 @@ elif selected_agent == "MARK (Marketing AI)":
         - Launch email/SMS campaigns to engage prospects
         - Schedule meetings and follow-ups automatically
         - Track engagement metrics in real-time
-        - Respond like a human expert - Think Jarvis from Iron Man
+        - Respond like a human expert
         
         **Status:** Setup in progress  
         **AI Model:** GPT-4o  
@@ -274,7 +275,7 @@ elif selected_agent == "MARK (Marketing AI)":
         """)
     
     with col2:
-        st.info("Coming Soon!\n\nMARK is being configured. Check back soon!")
+        st.info("Coming Soon!\n\nMARK is being configured.")
     
     st.markdown("---")
     
@@ -287,9 +288,9 @@ elif selected_agent == "MARK (Marketing AI)":
             st.write(user_input)
         
         with st.chat_message("assistant"):
-            st.write(f"*Good day, sir. I'm MARK, your marketing intelligence system.*")
+            st.write("Good day. I'm MARK, your marketing intelligence system.")
             st.write(f"I've analyzed your query: '{user_input}'")
-            st.write("However, I'm still being calibrated. My full capabilities will be online shortly. In the meantime, I recommend checking the CORA dashboard for recent lead activity.")
+            st.write("I'm still being calibrated. Check the CORA dashboard for recent lead activity.")
     
     st.markdown("---")
     
@@ -306,7 +307,7 @@ elif selected_agent == "MARK (Marketing AI)":
 elif selected_agent == "OPSI (Operations)":
     
     st.header("OPSI - Operations & Policy System Integrator")
-    st.write("*Internal Workflow & Compliance Management*")
+    st.write("Internal Workflow & Compliance Management")
     
     opsi_df = load_opsi_data()
     
@@ -326,14 +327,14 @@ elif selected_agent == "OPSI (Operations)":
     st.subheader("Active Tasks")
     st.dataframe(opsi_df, use_container_width=True, hide_index=True)
     
-    st.info("OPSI is coming soon! This will track grants, RFPs, compliance deadlines, and internal tasks.")
+    st.info("OPSI is coming soon! This will track grants, RFPs, and compliance deadlines.")
 
 st.markdown("---")
 st.markdown(
     f"""
     <div style='text-align: center; color: #666; padding: 1rem;'>
         <p><strong>ApexxAdams Multi-Agent Command Center</strong></p>
-        <p>CORA • MARK • OPSI | Last updated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+        <p>CORA | MARK | OPSI | Last updated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
     </div>
     """,
     unsafe_allow_html=True
