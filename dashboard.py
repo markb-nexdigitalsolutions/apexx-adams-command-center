@@ -253,14 +253,17 @@ elif selected_page == "Approve Leads":
                 col1, col2, col3, col4, col5 = st.columns([0.5, 2, 2.5, 2, 1.5])
                 
                 with col1:
+                    # Use index to ensure unique keys
                     is_selected = st.checkbox(
                         "✓",
                         value=select_all,
-                        key=f"lead_check_{row.get('Lead ID', idx)}",
+                        key=f"lead_check_{idx}",
                         label_visibility="collapsed"
                     )
                     if is_selected:
-                        selected_lead_ids.append(row.get('Lead ID', ''))
+                        lead_id = row.get('Lead ID', '')
+                        if lead_id:  # Only add non-empty Lead IDs
+                            selected_lead_ids.append(lead_id)
                 
                 with col2:
                     st.write(f"**{row.get('Name', 'N/A')}**")
