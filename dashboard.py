@@ -146,15 +146,16 @@ if selected_agent == "Dashboard Overview":
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        total_leads = len(cora_df) if not cora_df.empty else 0
-        st.metric("Total Leads (CORA)", total_leads)
-    
-    with col2:
-        st.metric("Active Campaigns (MARK)", "Coming Soon")
-    
-    with col3:
-        pending_tasks = len(opsi_df[opsi_df['Status '] == 'New']) if not opsi_df.empty else 0
-        st.metric("Pending Tasks (OPSI)", pending_tasks)
+    status_col = 'Status ' if 'Status ' in opsi_df.columns else 'Status'
+    pending = len(opsi_df[opsi_df[status_col] == 'New']) if not opsi_df.empty and status_col in opsi_df.columns else 0
+    st.metric("Pending Tasks", pending)
+with col2:
+    in_progress = len(opsi_df[opsi_df[status_col] == 'In Progress']) if not opsi_df.empty and status_col in opsi_df.columns else 0
+    st.metric("In Progress", in_progress)
+with col3:
+    priority_col = 'Priority ' if 'Priority ' in opsi_df.columns else 'Priority'
+    high = len(opsi_df[opsi_df[priority_col] == 'High']) if not opsi_df.empty and priority_col in opsi_df.columns else 0
+    st.metric("High Priority", high)
     
     with col4:
         response_rate = "68%" if not cora_df.empty else "N/A"
@@ -387,3 +388,4 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
