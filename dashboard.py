@@ -1,140 +1,265 @@
 import streamlit as st
-from datetime import datetime
+import pandas as pd
+import requests
 
-from cora import cora_page
-from mark import mark_page
-from opsi import opsi_page
-from utils import load_cora_data, load_opsi_data
-from styles import load_css
+# Local Modules
+from cora import get_cora_status, get_cora_leads
+from mark import get_mark_status
+from opsi import (
+    get_opsi_status,
+    load_opsi_tasks,
+    create_opsi_task
+)
 
-
-# ----------------------------------------------------
-# STREAMLIT SETUP + GLOBAL STYLE
-# ----------------------------------------------------
+# -------------------------
+# PAGE CONFIG
+# -------------------------
 st.set_page_config(
     page_title="ApexxAdams Command Center",
-    page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
-load_css()   # Load global CSS
-
-
-# ----------------------------------------------------
-# SIDEBAR NAVIGATION
-# ----------------------------------------------------
+# -------------------------
+# SIDEBAR
+# -------------------------
 st.sidebar.title("Agent Control Panel")
-st.sidebar.markdown("---")
 
+# ---- Agent Status ----
 st.sidebar.subheader("Agent Status")
-col1, col2, col3 = st.sidebar.columns(3)
-with col1:
-    st.markdown('<span class="status-active">CORA</span>', unsafe_allow_html=True)
-with col2:
-    st.markdown('<span class="status-idle">MARK</span>', unsafe_allow_html=True)
-with col3:
-    st.markdown('<span class="status-active">OPSI</span>', unsafe_allow_html=True)
 
-st.sidebar.markdown("---")
+cora_status = get_cora_status()
+mark_status = get_mark_status()
+opsi_status = get_opsi_status()
 
-page = st.sidebar.selectbox(
-    "Select Agent",
-    ["Dashboard Overview", "CORA (Lead Generation)", "MARK (Marketing AI)", "OPSI (Operations)"]
-)
-
-st.sidebar.markdown("---")
-
-# Quick triggers
-if st.sidebar.button("Run CORA Now"):
-    st.sidebar.success("CORA workflow triggered!")
-
-if st.sidebar.button("Ask MARK"):
-    st.sidebar.info("Opening MARK...")
-
-if st.sidebar.button("View OPSI Tasks"):
-    st.sidebar.info("Loading OPSI tasks...")
-
-
-# ----------------------------------------------------
-# HEADER
-# ----------------------------------------------------
-st.markdown('<h1 class="main-header">ApexxAdams Command Center</h1>', unsafe_allow_html=True)
-st.write("Multi-Agent System Dashboard - CORA | MARK | OPSI")
-st.markdown("---")
-
-
-# ----------------------------------------------------
-# PAGE ROUTING
-# ----------------------------------------------------
-if page == "Dashboard Overview":
-
-    cora_df = load_cora_data()
-    opsi_df = load_opsi_data()
-
-    st.subheader("System Overview")
-
-    import pandas as pd
-    status_col = "Status " if "Status " in opsi_df.columns else "Status"
-    priority_col = "Priority " if "Priority " in opsi_df.columns else "Priority"
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        pending = len(opsi_df[opsi_df[status_col] == "New"]) if not opsi_df.empty else 0
-        st.metric("Pending Tasks", pending)
-
-    with col2:
-        in_progress = len(opsi_df[opsi_df[status_col] == "In Progress"]) if not opsi_df.empty else 0
-        st.metric("In Progress", in_progress)
-
-    with col3:
-        high = len(opsi_df[opsi_df[priority_col] == "High"]) if not opsi_df.empty else 0
-        st.metric("High Priority", high)
-
-    with col4:
-        st.metric("Overall Performance", "68%" if not cora_df.empty else "N/A")
-
-    st.markdown("---")
-
-    colA, colB = st.columns(2)
-
-    with colA:
-        st.subheader("Latest CORA Leads")
-        if not cora_df.empty:
-            subset = cora_df.tail(5)
-            st.dataframe(subset, use_container_width=True, hide_index=True)
-        else:
-            st.info("No CORA leads available.")
-
-    with colB:
-        st.subheader("Upcoming OPSI Tasks")
-        if not opsi_df.empty:
-            subset = opsi_df.head(5)
-            st.dataframe(subset, use_container_width=True, hide_index=True)
-        else:
-            st.info("No OPSI tasks available.")
-
-elif page == "CORA (Lead Generation)":
-    cora_page()
-
-elif page == "MARK (Marketing AI)":
-    mark_page()
-
-elif page == "OPSI (Operations)":
-    opsi_page()
-
-
-# ----------------------------------------------------
-# FOOTER
-# ----------------------------------------------------
-st.markdown("---")
-st.markdown(
+st.sidebar.markdown(
     f"""
-    <div style='text-align:center; color:#666; padding:1rem;'>
-        <strong>ApexxAdams Multi-Agent Command Center</strong><br>
-        Last updated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    <div style="margin-bottom:10px;">
+        <span style="background:{'#2ecc71' if cora_status=='Active' else '#e74c3c'};padding:4px 8px;border-radius:4px;color:white;">CORA</span>
+        <span style="background:{'#2ecc71' if mark_status=='Active' else '#e74c3c'};padding:4px 8px;border-radius:4px;color:white;">MARK</span>
+        <span style="background:{'#2ecc71' if opsi_status=='Active' else '#e74c3c'};padding:4px 8px;border-radius:4px;color:white;">OPSI</span>
     </div>
     """,
     unsafe_allow_html=True
 )
+
+# ---- Select Agent (Navigation) ----
+st.sidebar.subheader("Select Agent")
+
+agent_page = st.sidebar.selectbox(
+    "Dashboard Overview",
+    ["Dashboard Overview", "CORA (Outreach)", "MARK (Marketing)", "OPSI (Operations)"]
+)
+
+# ---- Quick Actions ----
+st.sidebar.subheader("Quick Actions")
+
+# -------------------------
+# CORA Manual Trigger Function
+# -------------------------
+def trigger_cora():
+    try:
+        url = st.secrets["CORA_WEBHOOK_URL"]  # Must be in Streamlit secrets
+        res = requests.post(url, timeout=30)
+
+        if res.status_code == 200:
+            st.success("CORA has started running.")
+        else:
+            st.error(f"Failed to trigger CORA → {res.status_code}: {res.text}")
+
+    except Exception as e:
+        st.error(f"Error triggering CORA: {e}")
+
+# ---- RUN CORA ----
+if st.sidebar.button("Run CORA Now"):
+    trigger_cora()
+
+# ---- ASK MARK (Webhook Placeholder) ----
+def trigger_mark():
+    try:
+        url = st.secrets["MARK_WEBHOOK_URL"]
+        res = requests.post(url, timeout=30)
+
+        if res.status_code == 200:
+            st.success("MARK has started running.")
+        else:
+            st.error(f"Failed to trigger MARK → {res.status_code}: {res.text}")
+
+    except Exception as e:
+        st.error(f"Error triggering MARK: {e}")
+
+if st.sidebar.button("Ask MARK"):
+    trigger_mark()
+
+# ---- OPSI Tasks ----
+if st.sidebar.button("View OPSI Tasks"):
+    agent_page = "OPSI (Operations)"
+
+# -------------------------
+# MAIN DASHBOARD LOGIC
+# -------------------------
+st.title("ApexxAdams Command Center")
+st.write("Multi-Agent System Dashboard — CORA | MARK | OPSI")
+st.markdown("---")
+
+# ----------------------------------------------------------------
+#                     DASHBOARD OVERVIEW PAGE
+# ----------------------------------------------------------------
+if agent_page == "Dashboard Overview":
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    # CORA Leads
+    cora_leads = get_cora_leads()
+
+    with col1:
+        st.metric("Pending Tasks", len(load_opsi_tasks()))
+    with col2:
+        st.metric("CORA Leads", len(cora_leads))
+    with col3:
+        st.metric("AGENTS ACTIVE", sum([cora_status=="Active", mark_status=="Active", opsi_status=="Active"]))
+    with col4:
+        st.metric("Overall Performance", "N/A")
+
+    st.markdown("---")
+
+    # ---- Agent Cards ----
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        st.markdown("### CORA")
+        st.markdown("Community Outreach & Research Assistant")
+        st.write(f"**Status:** {cora_status}")
+        st.write(f"**Leads Generated:** {len(cora_leads)}")
+
+    with c2:
+        st.markdown("### MARK")
+        st.markdown("Marketing & Engagement Bot")
+        st.write(f"**Status:** {mark_status}")
+        st.write("**Setup:** In Progress")
+
+    with c3:
+        st.markdown("### OPSI")
+        st.markdown("Operations & Policy System")
+        st.write(f"**Status:** {opsi_status}")
+        st.write(f"**Tasks:** {len(load_opsi_tasks())}")
+
+    st.markdown("---")
+
+    # CORA Leads Preview
+    st.subheader("CORA Recent Leads")
+    if len(cora_leads) == 0:
+        st.info("No leads yet. Run CORA to generate leads.")
+    else:
+        st.dataframe(pd.DataFrame(cora_leads))
+
+# ----------------------------------------------------------------
+#                        CORA PAGE
+# ----------------------------------------------------------------
+elif agent_page == "CORA (Outreach)":
+    st.header("CORA — Community Outreach & Research Assistant")
+
+    leads = get_cora_leads()
+    if len(leads) == 0:
+        st.info("No leads have been generated yet.")
+    else:
+        st.dataframe(pd.DataFrame(leads))
+
+# ----------------------------------------------------------------
+#                        MARK PAGE
+# ----------------------------------------------------------------
+elif agent_page == "MARK (Marketing)":
+    st.header("MARK — Marketing & Engagement Bot")
+    st.write("MARK is configured to handle email interactions, replies, and follow-ups.")
+
+    st.write(f"**Status:** {mark_status}")
+
+# ----------------------------------------------------------------
+#                        OPSI PAGE
+# ----------------------------------------------------------------
+elif agent_page == "OPSI (Operations)":
+
+    st.header("OPSI — Operations & Policy System")
+
+    opsi_df = load_opsi_tasks()
+
+    # Metrics
+    colA, colB, colC = st.columns(3)
+
+    with colA:
+        pending = len(opsi_df[opsi_df["Status"] == "New"]) if not opsi_df.empty else 0
+        st.metric("Pending", pending)
+
+    with colB:
+        in_progress = len(opsi_df[opsi_df["Status"] == "In Progress"]) if not opsi_df.empty else 0
+        st.metric("In Progress", in_progress)
+
+    with colC:
+        high_priority = len(opsi_df[opsi_df["Priority"] == "High"]) if not opsi_df.empty else 0
+        st.metric("High Priority", high_priority)
+
+    st.markdown("---")
+
+    # TASK LIST
+    st.subheader("OPSI Tasks")
+    if opsi_df.empty:
+        st.info("No OPSI tasks found.")
+    else:
+        st.dataframe(opsi_df)
+
+    st.markdown("---")
+
+    # CREATE NEW TASK
+    with st.expander("➕ Create New Task"):
+        with st.form("new_task_form"):
+
+            title = st.text_input("Task Title*")
+
+            task_type = st.selectbox(
+                "Task Type*",
+                ["Select option", "RFP Submission", "Contract Renewal", "Audit", "Compliance Report"]
+            )
+
+            assigned_to = st.text_input("Assigned To*", placeholder="Enter name")
+
+            deadline = st.date_input("Deadline Date*")
+
+            priority = st.selectbox(
+                "Priority*",
+                ["Select option", "High", "Medium", "Low"]
+            )
+
+            notes = st.text_area("Notes")
+
+            submitted = st.form_submit_button("Create Task")
+
+            if submitted:
+                errors = []
+
+                if not title.strip():
+                    errors.append("Task Title is required.")
+                if task_type == "Select option":
+                    errors.append("Task Type is required.")
+                if priority == "Select option":
+                    errors.append("Priority is required.")
+                if not assigned_to.strip():
+                    errors.append("Assigned To is required.")
+
+                if errors:
+                    for e in errors:
+                        st.error(e)
+                else:
+                    task_data = {
+                        "title": title,
+                        "taskType": task_type,
+                        "assignedTo": assigned_to,
+                        "deadline": str(deadline),
+                        "priority": priority,
+                        "notes": notes
+                    }
+                    result = create_opsi_task(task_data)
+
+                    if result:
+                        st.success("Task created successfully.")
+                        st.cache_data.clear()
+                        st.rerun()
