@@ -67,7 +67,7 @@ def trigger_cora():
         if response.status_code == 200:
             try:
                 leads = response.json()
-                st.success(f"✅ CORA generated {len(leads)} new leads!")
+                st.success(f"✅ CORA generated new leads!")
             except:
                 st.success("✅ CORA workflow started successfully!")
         else:
@@ -269,6 +269,7 @@ elif agent_page == "OPSI (Operations)":
                         st.success("Task created successfully.")
                         st.cache_data.clear()
                         st.rerun()
+
 
 
 
