@@ -10,17 +10,7 @@ from opsi import (
     load_opsi_tasks,
     create_opsi_task
 )
-# Test section - remove after debugging
-if st.sidebar.button("TEST WEBHOOK"):
-    st.write("Button clicked!")
-    try:
-        test_url = "https://hackett2k.app.n8n.cloud/webhook/run-cora"
-        st.write(f"Sending to: {test_url}")
-        response = requests.post(test_url, timeout=30)
-        st.write(f"Status: {response.status_code}")
-        st.write(f"Response: {response.text[:500]}")
-    except Exception as e:
-        st.write(f"Error: {str(e)}")
+
 # -------------------------
 # PAGE CONFIG
 # -------------------------
@@ -63,7 +53,17 @@ agent_page = st.sidebar.selectbox(
 
 # ---- Quick Actions ----
 st.sidebar.subheader("Quick Actions")
-
+# Test section - remove after debugging
+if st.sidebar.button("TEST WEBHOOK"):
+    st.write("Button clicked!")
+    try:
+        test_url = "https://hackett2k.app.n8n.cloud/webhook/run-cora"
+        st.write(f"Sending to: {test_url}")
+        response = requests.post(test_url, timeout=30)
+        st.write(f"Status: {response.status_code}")
+        st.write(f"Response: {response.text[:500]}")
+    except Exception as e:
+        st.write(f"Error: {str(e)}")
 # -------------------------
 # CORA Manual Trigger Function
 # -------------------------
@@ -276,6 +276,7 @@ elif agent_page == "OPSI (Operations)":
                         st.success("Task created successfully.")
                         st.cache_data.clear()
                         st.rerun()
+
 
 
 
