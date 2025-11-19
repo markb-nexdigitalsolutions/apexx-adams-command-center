@@ -566,6 +566,37 @@ elif selected_page == "Manage Tasks":
                     with col2:
                         st.markdown("**Update:**")
                         
+                        # Title input
+                        new_title = st.text_input(
+                            "Title:",
+                            value=task_row[task_title_col],
+                            key=f"new_title_{selected_task_id}"
+                        )
+                        
+                        # Assigned To input
+                        new_assigned_to = st.text_input(
+                            "Assigned To:",
+                            value=task_row.get('Assigned To', ''),
+                            key=f"new_assigned_to_{selected_task_id}"
+                        )
+                        
+                        # Deadline input
+                        import datetime as dt
+                        current_deadline = task_row.get('Deadline Date', '')
+                        if current_deadline and current_deadline != 'N/A':
+                            try:
+                                deadline_value = dt.datetime.strptime(str(current_deadline), '%Y-%m-%d').date()
+                            except:
+                                deadline_value = dt.date.today()
+                        else:
+                            deadline_value = dt.date.today()
+                        
+                        new_deadline = st.date_input(
+                            "Deadline:",
+                            value=deadline_value,
+                            key=f"new_deadline_{selected_task_id}"
+                        )
+                        
                         # Status selection
                         current_status_index = 0
                         status_options = ["New", "In Progress", "Completed", "On Hold", "Cancelled"]
@@ -573,7 +604,7 @@ elif selected_page == "Manage Tasks":
                             current_status_index = status_options.index(task_row[status_col])
                         
                         new_status = st.selectbox(
-                            "New Status:",
+                            "Status:",
                             options=status_options,
                             index=current_status_index,
                             key=f"new_status_select_{selected_task_id}"
@@ -586,14 +617,14 @@ elif selected_page == "Manage Tasks":
                             current_priority_index = priority_options.index(task_row[priority_col])
                         
                         new_priority = st.selectbox(
-                            "New Priority:",
+                            "Priority:",
                             options=priority_options,
                             index=current_priority_index,
                             key=f"new_priority_select_{selected_task_id}"
                         )
                         
                         update_notes = st.text_area(
-                            "Update Notes:", 
+                            "Notes:", 
                             value=task_row.get('Notes', ''), 
                             key=f"update_notes_{selected_task_id}"
                         )
@@ -601,6 +632,9 @@ elif selected_page == "Manage Tasks":
                         if st.button("💾 Update Task", type="primary", use_container_width=True, key=f"update_btn_{selected_task_id}"):
                             update_data = {
                                 "taskId": selected_task_id,
+                                "title": new_title,
+                                "assignedTo": new_assigned_to,
+                                "deadline": str(new_deadline),
                                 "status": new_status,
                                 "priority": new_priority,
                                 "notes": update_notes
