@@ -411,6 +411,9 @@ elif selected_page == "Manage Tasks":
     # MANAGE TASKS PAGE (OPSI)
     # ========================================
     
+    # Scroll anchor at top
+    st.markdown('<div id="manage-tasks-top"></div>', unsafe_allow_html=True)
+    
     st.header("📋 Manage Tasks")
     st.write("Create and track compliance tasks, deadlines, and operations")
     
@@ -497,6 +500,12 @@ elif selected_page == "Manage Tasks":
                     if result:
                         st.success("✅ Task created successfully!")
                         st.cache_data.clear()
+                        st.markdown("""
+                        <script>
+                            window.parent.document.querySelector('[data-testid="stAppViewContainer"]').scrollTop = 0;
+                        </script>
+                        """, unsafe_allow_html=True)
+                        st.rerun()
     
     # ========================================
     # UPDATE TASK SECTION
@@ -656,6 +665,12 @@ elif selected_page == "Manage Tasks":
                                 # Clear search on successful update
                                 st.session_state.task_id_search = ""
                                 st.cache_data.clear()
+                                st.markdown("""
+                                <script>
+                                    window.parent.document.querySelector('[data-testid="stAppViewContainer"]').scrollTop = 0;
+                                </script>
+                                """, unsafe_allow_html=True)
+                                st.rerun()
                             else:
                                 st.error("❌ Failed to update task")
             else:
